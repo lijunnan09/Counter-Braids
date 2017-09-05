@@ -1,16 +1,18 @@
 #include "taskCounterBraids.h"
 
 
-void getHashValue(struct flowTuple *flow, uint16 *index_hash){
+void getHashValue(struct flowTuple *flow, uint32 *index_hash){
 	uint8 key[13]; 
 	flow2Byte(flow, key);
 
-	index_hash[0] = CRC16_1(key, 13);
+/*	index_hash[0] = CRC16_1(key, 13);
 	index_hash[1] = CRC16_2(key, 13);
-	index_hash[3] = CRC16_3(key, 13);
-	int i;
-	for(i = 0; i < NUM_HASH; i++){
-		index_hash[i] = calculateHash(index_hash[i]);
+	index_hash[3] = CRC16_3(key, 13);*/
+
+	int i =0;
+	for(i = 0; i< NUM_HASH; i++){
+		index_hash[i] = calculateCRC32(key, 13, crc32Table[i]);
+		index_hash[i] = calculateHash32(index_hash[i]);
 	}
 }
 
@@ -38,7 +40,7 @@ void addFlow(tFlowTable *flowTable, int *index_flowTable, struct flowTuple *flow
 	flowTable[*index_flowTable].ft.dst_port = flow->dst_port;
 	flowTable[*index_flowTable].ft.proto = flow->proto;*/
 
-	uint16 index_hash[NUM_HASH];
+	uint32 index_hash[NUM_HASH];
 	getHashValue(flow, index_hash);
 
 	int i;
@@ -52,7 +54,7 @@ void addFlow(tFlowTable *flowTable, int *index_flowTable, struct flowTuple *flow
 
 
 void updateCounterBraids(tHashTable *hashTable, struct flowTuple *flow){
-	uint16 index_hash[NUM_HASH];
+	uint32 index_hash[NUM_HASH];
 	getHashValue(flow, index_hash);
 
 	int i;
@@ -243,6 +245,6 @@ void printHashIndex(tFlowTable *flowTable, int num_flow){
 	FILE *fp;
 	fp = fopen("hashIndex.txt","w");
 	for(int i = 0; i< num_flow; i++){
-		fprintf(fp, "%d\t1:%hd\t2:%hd\n", i, flowTable[i].index_hash[0], flowTable[i].index_hash[1]);
+		fprintf(fp, "%d\t1:%u\t2:%u\n", i, flowTable[i].index_hash[0], flowTable[i].index_hash[1]);
 	}
 }

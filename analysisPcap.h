@@ -19,7 +19,7 @@ uint32 hash_5_tuple(struct flowTuple *pkt);
 
 void analysisInitial(tBigFlowTable *bigFlowTable, tBigFlowTable *bigFlowTable_c);
 
-int analysisPacket(struct flowTuple *pkt, int num_pkt, tBigFlowTable *bigFlowTable, tBigFlowTable *bigFlowTable_c);
+int analysisPacket(FILE *fp_pkt, FILE *fp_pkt_tag, tBigFlowTable *bigFlowTable, tBigFlowTable *bigFlowTable_c);
 
 int calculateRelatedError(tFlowTable *flowTable, int num_flow, tBigFlowTable *bigFlowTable);
 

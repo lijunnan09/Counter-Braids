@@ -4,7 +4,7 @@
 #include "common.h"
 #include "hash.h"
 
-void getHashValue(struct flowTuple *flow, uint16 *index_hash);
+void getHashValue(struct flowTuple *flow, uint32 *index_hash);
 
 void initialCounterBraids(tHashTable *hashTable, tFlowTable *flowTable);
 

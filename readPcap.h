@@ -56,8 +56,9 @@ typedef struct tcpHeader{
 }tTCPHeader;
 
 
-int readTrace(FILE *fp, struct flowTuple *pkt);
+//int readTrace(FILE *fp, struct flowTuple *pkt);
 
+void readTrace(FILE *fp_pcap, FILE *fp_pkt);
 
 
 #endif

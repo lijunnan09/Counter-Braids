@@ -19,10 +19,14 @@ void analysisInitial(tBigFlowTable *bigFlowTable, tBigFlowTable *bigFlowTable_c)
 }
 
 
-int analysisPacket(struct flowTuple *pkt, int num_pkt, tBigFlowTable *bigFlowTable, tBigFlowTable *bigFlowTable_c){
-	FILE *fp;
-	if((fp = fopen("result_3.txt","w"))==NULL){
-		printf("open result_3.txt error\n");
+int analysisPacket(FILE *fp_pkt, FILE * fp_pkt_tag,tBigFlowTable *bigFlowTable, tBigFlowTable *bigFlowTable_c){
+	if((fp_pkt_tag = fopen("result_pkt_2.txt","w"))==NULL){
+		printf("open result_pkt_2.txt error\n");
+		exit(0);
+	}
+
+	if((fp_pkt = fopen("result_pkt.txt","r"))==NULL){
+		printf("read result_pkt.txt error\n");
 		exit(0);
 	}
 
@@ -31,50 +35,52 @@ int analysisPacket(struct flowTuple *pkt, int num_pkt, tBigFlowTable *bigFlowTab
 	tBigFlowTable *pBFT, *preBFT;
 	int i;
 	int num_flow = 0;
-	for(i = 0; i< num_pkt; i++){
-
-		if(pkt[i].proto != 0x6) continue;
-
-		fprintf(fp, "%d\t%x\t%x\t%hd\t%hd\n", i, pkt[i].src_ip, pkt[i].dst_ip,
-			pkt[i].src_port,pkt[i].dst_port);
+	int num_pkt = 0;
+	//for(i = 0; i< num_pkt; i++){
+	struct flowTuple pkt;
+	while(fscanf(fp_pkt, "%x\t%x\t%hd\t%hd\t%d\n", &pkt.src_ip, &pkt.dst_ip, &pkt.src_port, &pkt.dst_port, &pkt.proto)!= EOF){
+		if(pkt.proto != 0x6)
+			continue;
+		/*fprintf(fp, "%d\t%x\t%x\t%hd\t%hd\n", i, pkt[i].src_ip, pkt[i].dst_ip,
+			pkt[i].src_port,pkt[i].dst_port);*/
 		
-		hash_index = hash_5_tuple(&pkt[i]);
+		hash_index = hash_5_tuple(&pkt);
 		pBFT = bigFlowTable[hash_index].eNext;
 		preBFT = &bigFlowTable[hash_index];
 
 
 
 		if(bigFlowTable[hash_index].count_pkt == 0){
-			cpyFlowTuple(&(bigFlowTable[hash_index].ft), &pkt[i]);
-			pkt[i].tag = 1;
+			cpyFlowTuple(&(bigFlowTable[hash_index].ft), &pkt);
+			pkt.tag = 1;
 			bigFlowTable[hash_index].eNext = NULL;
-/*			bigFlowTable[hash_index].ft.src_ip = pkt[i].src_ip;
+/*				bigFlowTable[hash_index].ft.src_ip = pkt[i].src_ip;
 			bigFlowTable[hash_index].ft.dst_ip = pkt[i].dst_ip;
 			bigFlowTable[hash_index].ft.src_port = pkt[i].src_port;
 			bigFlowTable[hash_index].ft.dst_port = pkt[i].dst_port;
-			bigFlowTable[hash_index].ft.proto = pkt[i].proto;*/			
+			bigFlowTable[hash_index].ft.proto = pkt[i].proto;	*/		
 			num_flow++;
 			//printf("num_flow_1++\n");
 
 			bigFlowTable[hash_index].count_pkt = 1;
 		}
-		else if(cmpFlowTuple(&bigFlowTable[hash_index].ft, &pkt[i]) == 0){
-			pkt[i].tag = 0;
+		else if(cmpFlowTuple(&bigFlowTable[hash_index].ft, &pkt) == 0){
+			pkt.tag = 0;
 			bigFlowTable[hash_index].count_pkt ++;
 		}
 		else{
 			while(pBFT != NULL){
-				if(cmpFlowTuple(&(pBFT->ft), &pkt[i]) == 0){
+				if(cmpFlowTuple(&(pBFT->ft), &pkt) == 0){
 					pBFT->count_pkt ++;
-					pkt[i].tag = 0;
+					pkt.tag = 0;
 					break;
 				}
 				preBFT = pBFT;
 				pBFT = pBFT->eNext;
 			}
 			if(pBFT == NULL){
-				cpyFlowTuple(&(bigFlowTable_c[conflict_index].ft), &pkt[i]);
-				pkt[i].tag = 1;
+				cpyFlowTuple(&(bigFlowTable_c[conflict_index].ft), &pkt);
+				pkt.tag = 1;
 				num_flow++;
 
 				bigFlowTable_c[conflict_index].count_pkt = 1;
@@ -82,8 +88,16 @@ int analysisPacket(struct flowTuple *pkt, int num_pkt, tBigFlowTable *bigFlowTab
 				conflict_index +=1;
 			}
 		}
+		fprintf(fp_pkt_tag, "%x\t%x\t%hd\t%hd\t%d\t%d\n", pkt.src_ip, pkt.dst_ip,
+			pkt.src_port,pkt.dst_port, pkt.proto, pkt.tag);
+
+		num_pkt++;
+		if((num_pkt > MAX_NUM_PACKET) || (num_flow > MAX_NUM_FLOW))
+			break;
 	}
-	fclose(fp);
+	fclose(fp_pkt);
+	fclose(fp_pkt_tag);
+	printf("num_pkt:%d\n", num_pkt);
 	return num_flow;
 }
 

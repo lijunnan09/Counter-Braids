@@ -5,16 +5,20 @@
 #include "analysisPcap.h"
 
 int main(){
-	struct flowTuple pkt[MAX_NUM_PACKET];
+
+	//hash initial
+	initialHash();
+	
+
+	//struct flowTuple pkt[MAX_NUM_PACKET];
 	// fp_pcap used to read pcap;
 	// fp_cb used to record countBraids statics;
 	// fp_bf used to record real statics(big flow table);
-	FILE *fp_pcap, *fp_cb, *fp_bf;
-
+	FILE *fp_pcap,*fp_pkt, *fp_pkt_tag,*fp_cb, *fp_bf;
 	
 
 	int num_pkt =0;
-	num_pkt = readTrace(fp_pcap,pkt);
+	readTrace(fp_pcap, fp_pkt);
 
 
 	// analysis packe by big flow table;
@@ -25,7 +29,7 @@ int main(){
 	int num_flow; 
 	analysisInitial(bigFLowTable, bigFLowTable_c);
 		// analysis
-	num_flow = analysisPacket(pkt, num_pkt, bigFLowTable, bigFLowTable_c);	
+	num_flow = analysisPacket(fp_pkt, fp_pkt_tag, bigFLowTable, bigFLowTable_c);	
 
 
 	// countBraids;
@@ -42,11 +46,21 @@ int main(){
 
 	int index_flowTable = 0;
 
-	for(int i = 0; i< num_pkt; i++){
-		if(pkt[i].proto != 0x6) continue;
-		if(pkt[i].tag == 1)
-			addFlow(flowTable, &index_flowTable, &pkt[i]);
-		updateCounterBraids(hashTable, &pkt[i]);
+
+	if((fp_pkt_tag = fopen("result_pkt_2.txt", "r"))==NULL){
+		printf("read result_pkt_2.txt error\n");
+		exit(0);
+	}
+
+	//for(int i = 0; i< num_pkt; i++){
+	struct flowTuple pkt;
+	while(fscanf(fp_pkt_tag, "%x\t%x\t%hd\t%hd\t%d\t%d\n", &pkt.src_ip, &pkt.dst_ip,
+			&pkt.src_port, &pkt.dst_port, &pkt.proto, &pkt.tag) != EOF){
+		if(pkt.proto != 0x6) continue;
+		if(pkt.tag == 1)
+			addFlow(flowTable, &index_flowTable, &pkt);
+		updateCounterBraids(hashTable, &pkt);
+		num_pkt++;
 	}
 
 	decodeCounterBraids(hashTable, flowTable, index_flowTable, hashTableCounter);
@@ -70,7 +84,7 @@ int main(){
 	printf("num_flow_bigFlow:%d\n", num_flow);
 	printf("num_pkt:%d\n", num_pkt);
 
-	fclose(fp_pcap);
+	fclose(fp_pkt_tag);
 	fclose(fp_cb);
 	fclose(fp_bf);
 

@@ -49,7 +49,7 @@ typedef struct counter{
 typedef struct flowTable{
 	struct flowTuple ft;
 	uint32 count;				// used to record the final estimation value;
-	uint16 index_hash[NUM_HASH];	// used to record the hash values of each hash function;
+	uint32 index_hash[NUM_HASH];	// used to record the hash values of each hash function;
 	tCounter uList[NUM_HASH];		// used to record the U values returned from hashTable;
 } tFlowTable;
 
@@ -86,6 +86,7 @@ uint32 uABS(uint32 a, uint32 b);
 int cmpFlowTuple(struct flowTuple *flowA, struct flowTuple *flowB);
 
 void  cpyFlowTuple(struct flowTuple *flowA, struct flowTuple *flowB);
+
 
 
 #endif
