@@ -104,6 +104,7 @@ int analysisPacket(FILE *fp_pkt, FILE * fp_pkt_tag,tBigFlowTable *bigFlowTable, 
 int calculateRelatedError(tFlowTable *flowTable, int num_flow, tBigFlowTable *bigFlowTable){
 	int i = 0;
 	int hash_index;
+	int num_error_flow =0;
 	int num_error = 0;
 	tBigFlowTable *pBFT;
 	for(i = 0; i< num_flow; i++){
@@ -112,11 +113,14 @@ int calculateRelatedError(tFlowTable *flowTable, int num_flow, tBigFlowTable *bi
 		while((pBFT) && (pBFT->count_pkt != 0)){
 			if(cmpFlowTuple(&(pBFT->ft), &(flowTable[i].ft)) == 0){
 				num_error += uABS(pBFT->count_pkt, flowTable[i].count);
+				if(pBFT->count_pkt != flowTable[i].count)
+					num_error_flow +=1;
 				break;
 			}
 			pBFT = pBFT->eNext;
 		}
 	}
+	printf("num_error_flow:%d\n", num_error_flow);
 	return num_error;
 }
 

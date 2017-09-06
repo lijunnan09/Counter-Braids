@@ -4,8 +4,8 @@
 #include "common.h"
 
 
-#define NUM_BIG_FLOW_ENTRY 1000
-#define PRIME 991
+#define NUM_BIG_FLOW_ENTRY 10000000
+#define PRIME 9999991
 
 
 typedef struct big_flow_table{

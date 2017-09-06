@@ -1,71 +1,48 @@
 #include "taskCounterBraids.h"
 
-
-void getHashValue(struct flowTuple *flow, uint32 *index_hash){
-	uint8 key[13]; 
-	flow2Byte(flow, key);
-
-/*	index_hash[0] = CRC16_1(key, 13);
-	index_hash[1] = CRC16_2(key, 13);
-	index_hash[3] = CRC16_3(key, 13);*/
-
-	int i =0;
+void getHashValue(uint8 *key, int keyByteLength, uint32 *index_hash){
+	int i = 0;
 	for(i = 0; i< NUM_HASH; i++){
-		index_hash[i] = calculateCRC32(key, 13, crc32Table[i]);
+		index_hash[i] = calculateCRC32(key, keyByteLength, crc32Table[i]);
 		index_hash[i] = calculateHash32(index_hash[i]);
 	}
 }
 
-void getHashValue_Layer2(uint32 index_hash, uint32 *index_hash_Layer2){
+void getHashValue_flowTuple(struct flowTuple *flow, uint32 *index_hash){
+	uint8 key[13]; 
+	flow2Byte(flow, key);
+	getHashValue(key, 13, index_hash);
+}
+
+void getHashValue_uint32(uint32 key, uint32 *index_hash){
 	int i = 0;
 	int32views index;
-	index.as_int32 = index_hash; 
-	for (i = 0; i < NUM_HASH; i++){
-		index_hash_Layer2[i] = calculateCRC32(index.as_int8s, 4, crc32Table[i]);
-		index_hash_Layer2[i] = index_hash_Layer2[i]%(NUM_CONTER_2_LAYER);
-	}
+	index.as_int32 = key;
+	getHashValue(index.as_int8s, 4, index_hash);
 }
 
 
-
-void initialCounterBraids(tHashTable *hashTable, tFlowTable *flowTable){
+void initialCounterBraids(tHashTable *hashTable, tFlowTable *flowTable, int num_entry, int num_flow){
 	int i = 0;
-	for(i = 0; i < NUM_CONTER_1_LAYER; i++){
+	for(i = 0; i < num_entry; i++){
 		hashTable[i].count = 0;
 		hashTable[i].statusBit = 0;
 		hashTable[i].vList = NULL;
 	}
-	for(i= 0; i< MAX_NUM_FLOW; i++){
-		flowTable[i].count = 0;
-	}
-}
-
-void initialCounterBraids_Layer2(tHashTable *hashTable, tFlowTable *flowTable){
-	int i = 0;
-	for(i = 0; i < NUM_CONTER_2_LAYER; i++){
-		hashTable[i].count = 0;
-		hashTable[i].statusBit = 0;
-		hashTable[i].vList = NULL;
-	}
-	for(i= 0; i< NUM_CONTER_1_LAYER; i++){
+	for(i= 0; i< num_flow; i++){
 		flowTable[i].count = 0;
 	}
 }
 
 
 
-void addFlow(tFlowTable *flowTable, int *index_flowTable, struct flowTuple *flow){
+void addFlow_flowTuple(tFlowTable *flowTable, int *index_flowTable, struct flowTuple *flow){
 
 	cpyFlowTuple(&(flowTable[*index_flowTable].ft), flow);
 	flowTable[*index_flowTable].count = 0;
-/*	flowTable[*index_flowTable].ft.src_ip = flow->src_ip;
-	flowTable[*index_flowTable].ft.dst_ip = flow->dst_ip;
-	flowTable[*index_flowTable].ft.src_port = flow->src_port;
-	flowTable[*index_flowTable].ft.dst_port = flow->dst_port;
-	flowTable[*index_flowTable].ft.proto = flow->proto;*/
 
 	uint32 index_hash[NUM_HASH];
-	getHashValue(flow, index_hash);
+	getHashValue_flowTuple(flow, index_hash);
 
 	int i;
 	for(i = 0; i< NUM_HASH; i++){
@@ -76,53 +53,110 @@ void addFlow(tFlowTable *flowTable, int *index_flowTable, struct flowTuple *flow
 	*index_flowTable += 1;
 }
 
-/*
-void updateCounterBraids(tHashTable *hashTable, struct flowTuple *flow){
+void addFlow_uint32(tFlowTable *flowTable, int *index_flowTable, uint entryPosition, int hash_level){
+	flowTable[*index_flowTable].count = 0;
+	flowTable[*index_flowTable].entryPosition = entryPosition;
+
 	uint32 index_hash[NUM_HASH];
-	getHashValue(flow, index_hash);
+	getHashValue_uint32(entryPosition, index_hash);
+
+	int num_entry = getNumEntry(hash_level);
 
 	int i;
-	for(i = 0; i < NUM_HASH; i++){
-		hashTable[index_hash[i]].count += 1;
+	for(i = 0; i< NUM_HASH; i++){
+		flowTable[*index_flowTable].uList[i].count_value = 0;
+		flowTable[*index_flowTable].index_hash[i] = index_hash[i]%num_entry;
 	}
+
+	*index_flowTable += 1;
 }
-*/
-void updateCounterBraids(tHashTable *hashTable, struct flowTuple *flow, tHashTable *hashTable_Layer2, int *index_flowTable_Layer2, tFlowTable *flowTable_Layer2){
+
+
+void updateCounterBraids_flowTuple(tHashTable *hashTable, struct flowTuple *flow, struct carry *carry){
 	uint32 index_hash[NUM_HASH];
-	getHashValue(flow, index_hash);
+	getHashValue_flowTuple(flow, index_hash);
 
 	int i;
 	for(i = 0; i < NUM_HASH; i++){
+		carry->overFlow[i] = 0;
+		carry->hash_level = 1;
+		
 		hashTable[index_hash[i]].count += 1;
 		if(hashTable[index_hash[i]].count == MAX_NUM_1_LAYER){
 			hashTable[index_hash[i]].count = 0;
-
-			uint32 index_hash_Layer2[NUM_HASH];
-			getHashValue_Layer2(index_hash[i], index_hash_Layer2);
-
-			if(hashTable[index_hash[i]].statusBit == 0){
+			carry->entryPosition[i] = index_hash[i];
+			carry->statusBit[i] = hashTable[index_hash[i]].statusBit;
+			carry->overFlow[i] = 1;
+			if(hashTable[index_hash[i]].statusBit == 0)
 				hashTable[index_hash[i]].statusBit = 1;
-				//addFlow_Layer2(flowTable_Layer2, &index_flowTable_Layer2, index_hash[i]);
-				flowTable_Layer2[*index_flowTable_Layer2].entryPosition = index_hash[i];
-				flowTable_Layer2[*index_flowTable_Layer2].count = 0;
-
-				int perHash =0;
-				for(perHash = 0; perHash < NUM_HASH; perHash++){
-					flowTable_Layer2[*index_flowTable_Layer2].index_hash[perHash] = index_hash_Layer2[perHash];
-					flowTable_Layer2[*index_flowTable_Layer2].uList[perHash].count_value = 0;
-				}
-				*index_flowTable_Layer2 += 1;
-			}
-
-			int perHash = 0;
-			for(perHash = 0; perHash < NUM_HASH; perHash ++){
-				hashTable_Layer2[index_hash_Layer2[perHash]].count +=1;
-				//printf("hash_index_layer2:%u\n", index_hash_Layer2[perHash]);
-			}
-			//printf("------------------------------------\n");
 		}
 	}
 }
+
+void updateCounterBraids_uint32(tHashTable *hashTable, uint32 entryPosition,struct carry *carry, int hash_level){
+	int maxNum_Layer, num_entry;
+	maxNum_Layer = getNumLayer(hash_level);
+	num_entry = getNumEntry(hash_level);
+
+	uint32 index_hash[NUM_HASH];
+	getHashValue_uint32(entryPosition, index_hash);
+
+	int i;
+	for(i=0; i < NUM_HASH; i++)
+		index_hash[i] = index_hash[i]%num_entry;
+
+	for(i = 0; i < NUM_HASH; i++){
+		carry->overFlow[i] = 0;
+		carry->hash_level = hash_level+1;
+		
+		hashTable[index_hash[i]].count += 1;
+		if(hashTable[index_hash[i]].count == maxNum_Layer){
+			hashTable[index_hash[i]].count = 0;
+			carry->entryPosition[i] = index_hash[i];
+			carry->statusBit[i] = hashTable[index_hash[i]].statusBit;
+			carry->overFlow[i] = 1;
+			if(hashTable[index_hash[i]].statusBit == 0)
+				hashTable[index_hash[i]].statusBit = 1;
+		}
+	}
+}
+
+void addCarryList(struct carryList *arrayList, struct carry *carry, int *indexCarry){
+	int i;
+	for(i = 0; i< NUM_HASH; i++){
+		if(carry->overFlow[i] == 1){
+			arrayList[*indexCarry].entryPosition = carry->entryPosition[i];
+			arrayList[*indexCarry].statusBit = carry->statusBit[i];
+			arrayList[*indexCarry].hash_level = carry->hash_level;
+			*indexCarry += 1;
+		}
+	}
+}
+
+void updateCounterBraids(tHashTable **hashTable, struct flowTuple *flow, int *index_flowTable, tFlowTable **flowTable){
+	struct carry *carry;
+	struct carryList *carryList;
+	carryList = (struct carryList *)malloc(200*sizeof(struct carryList));
+	int indexCarry = 0;
+	int pIndexCarry = 0;
+
+	carry = (struct carry *)malloc(sizeof(struct carry));
+	updateCounterBraids_flowTuple(hashTable[0], flow, carry);
+
+	addCarryList(carryList, carry, &indexCarry);
+
+	while(pIndexCarry < indexCarry){
+		//printf("^^^^^^^^overFlow^^^^^^%d\n", carryList[pIndexCarry].entryPosition);
+		if(carryList[pIndexCarry].statusBit == 0)	// addFlow;
+			addFlow_uint32(flowTable[carryList[pIndexCarry].hash_level], &index_flowTable[carryList[pIndexCarry].hash_level], carryList[pIndexCarry].entryPosition, carryList[pIndexCarry].hash_level);
+
+		updateCounterBraids_uint32(hashTable[carryList[pIndexCarry].hash_level], carryList[pIndexCarry].entryPosition, carry, carryList[pIndexCarry].hash_level);
+		addCarryList(carryList, carry, &indexCarry);
+
+		pIndexCarry +=1;
+	}
+}
+
 
 
 void decodeInitial(tHashTable *hashTable, tFlowTable *flowTable, int num_flow, tCounter *hashTableCount){
@@ -159,8 +193,21 @@ void decodeInitial(tHashTable *hashTable, tFlowTable *flowTable, int num_flow, t
 	}
 }
 
+void decodeCounterBraids(tHashTable **hashTable, tFlowTable **flowTable, int *num_flow, tCounter **hashTableCount){
+	// for each layer
+	int i =0;
+	for(i = NUM_LAYER-1; i >0; i--){
+		int num_entry = getNumEntry(i);
+		decodeProcess(hashTable[i], flowTable[i], num_flow[i], hashTableCount[i], num_entry);
 
-void decodeCounterBraids(tHashTable *hashTable, tFlowTable *flowTable, int num_flow, tCounter *hashTableCount, int num_entry){
+		changeFlowTableToHashTable(hashTable[i-1], flowTable[i], num_flow[i]);
+	}
+	int num_entry = getNumEntry(0);
+	decodeProcess(hashTable[0], flowTable[0], num_flow[0], hashTableCount[0], num_entry);
+}
+
+
+void decodeProcess(tHashTable *hashTable, tFlowTable *flowTable, int num_flow, tCounter *hashTableCount, int num_entry){
 	uint16 index_hash[NUM_HASH];
 	//tCounter *htCount;
 
@@ -268,7 +315,7 @@ void decodeCounterBraids(tHashTable *hashTable, tFlowTable *flowTable, int num_f
 	//printHashIndex(flowTable, num_flow);
 }
 
-void changeFlowTableToHashTable_Layer2(tHashTable *hashTable,tFlowTable *flowTable_Layer2, int num_flow_Layer2){
+void changeFlowTableToHashTable(tHashTable *hashTable,tFlowTable *flowTable_Layer2, int num_flow_Layer2){
 	int i =0;
 	int index_entry;
 	for(i = 0; i< num_flow_Layer2; i++){
@@ -287,12 +334,23 @@ void printFlowStatics(FILE *fp_w, tFlowTable *flowTable, int num_flow){
 }
 
 
-void printHashTable(tHashTable *hashTable){
+void printHashTable(tHashTable *hashTable, int num_entry){
 	int i;
-	for(i = 0; i< NUM_CONTER_1_LAYER; i++){
-		printf("%dth:\t%u\n", i, hashTable[i].count);
+	for(i = 0; i< num_entry; i++){
+		printf("%dth:\t%u\t", i, hashTable[i].count);
+		tCounter *pCount= hashTable[i].vList;
+		while(pCount){
+			printf("%d\t", pCount->flowID);
+			pCount = pCount->cNext;
+		}
+		printf("\n");
 	}
-	printf("-------------\n");
+}
+void printFlowTable(tFlowTable *flowTable, int num_flow){
+	int i = 0; 
+	for(i = 0; i < num_flow; i++){
+		printf("%dth:%d,%d\tentryPosition:%d\n", i, flowTable[i].index_hash[0], flowTable[i].index_hash[1], flowTable[i].entryPosition);
+	}
 }
 
 

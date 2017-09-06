@@ -12,7 +12,7 @@
 
 
 
-#define NUM_LAYER 1
+#define NUM_LAYER 4
 #define NUM_HASH 2
 #define NUM_CONTER_1_LAYER 32
 #define BIT_HASH_INDEX 5
@@ -23,8 +23,14 @@
 #define MIN_VALUE 1
 
 #define NUM_CONTER_2_LAYER 16
+#define NUM_CONTER_3_LAYER 8
+#define NUM_CONTER_4_LAYER 8
 
 #define MAX_NUM_1_LAYER 16	// 8bit;
+#define MAX_NUM_2_LAYER 4	// 8bit;
+#define MAX_NUM_3_LAYER 4	// 8bit;
+#define MAX_NUM_4_LAYER 16	// 8bit;
+
 
 /*	2^16	65536
 	2^17	131072
@@ -34,11 +40,12 @@
 
 
 
-
 typedef unsigned long uint64;
 typedef unsigned int uint32;
 typedef unsigned short uint16;
 typedef unsigned char uint8;
+
+/*	struct Defination	*/
 
 struct flowTuple{
 	uint32 src_ip;
@@ -67,11 +74,22 @@ typedef struct flowTable{
 typedef struct hashTable {
 	uint32 count;			// number of packets hashed to this entry;
 	uint8 statusBit;		// '1' represent the count is overflow;
-	//uint32 total_count;
 	tCounter *vList;		// used to record the V values returned from flowTable;
 } tHashTable;
 
+struct carry{
+	uint32 entryPosition[NUM_HASH];
+	uint8 statusBit[NUM_HASH];
+	uint8 overFlow[NUM_HASH];
+	uint8 hash_level;
+};
 
+struct carryList{
+	uint32 entryPosition;
+	uint8 statusBit;
+	uint8 hash_level;
+	struct carryList *cNext;
+};
 
 typedef union{
 	uint32 as_int32;
@@ -86,19 +104,26 @@ typedef union{
 
 
 
+/*	function Defination	*/ 
 
-
-
+/* change struct to uint8 array */
 void flow2Byte(struct flowTuple *flow, uint8 *key);
 
 uint32 getMaxValue(uint32 a, uint32 b);
 
+/* unsigned abs() function */
 uint32 uABS(uint32 a, uint32 b);
 
+/* cmopare struct */
 int cmpFlowTuple(struct flowTuple *flowA, struct flowTuple *flowB);
 
+/* copy struct */
 void  cpyFlowTuple(struct flowTuple *flowA, struct flowTuple *flowB);
 
 
+void initialParameter(int * pNumEntry, int * pNumFlow);
+
+int getNumEntry(int hash_level);
+int getNumLayer(int hash_level);
 
 #endif

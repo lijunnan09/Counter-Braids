@@ -5,10 +5,9 @@
 #include "analysisPcap.h"
 
 int main(){
-
 	//hash initial
 	initialHash();
-	
+
 
 	//struct flowTuple pkt[MAX_NUM_PACKET];
 	// fp_pcap used to read pcap;
@@ -34,26 +33,25 @@ int main(){
 
 	// countBraids;
 		// initial;
-	tHashTable *hashTable, *hashTable_Layer2;
-	tFlowTable *flowTable, *flowTable_Layer2;
-	tCounter *hashTableCounter, *hashTableCounter_Layer2;
-	hashTable = (struct hashTable *)malloc(NUM_CONTER_1_LAYER*sizeof(struct hashTable));
-	flowTable = (struct flowTable *)malloc(MAX_NUM_FLOW*sizeof(struct flowTable));
-	hashTableCounter = (struct counter *)malloc(MAX_NUM_FLOW*NUM_HASH*sizeof(struct counter));
+	tHashTable *hashTable[NUM_LAYER];
+	tFlowTable *flowTable[NUM_LAYER];
+	tCounter *hashTableCounter[NUM_LAYER];
 
-	hashTable_Layer2 = (struct hashTable *)malloc(NUM_CONTER_2_LAYER*sizeof(struct hashTable));
-	flowTable_Layer2 = (struct flowTable *)malloc(NUM_CONTER_1_LAYER*sizeof(struct flowTable));
-	hashTableCounter_Layer2 = (struct counter *)malloc(NUM_CONTER_1_LAYER*NUM_HASH*sizeof(struct counter));
+	int pNumEntry[4], pNumFlow[4];
 
-	initialCounterBraids(hashTable, flowTable);
+	initialParameter(pNumEntry, pNumFlow);
+	int i =0; 
+	for(i = 0; i < NUM_LAYER; i++){
+		hashTable[i] = (tHashTable*)malloc(pNumEntry[i]*sizeof(tHashTable));
+		flowTable[i] = (tFlowTable *)malloc(pNumFlow[i]*sizeof(tFlowTable));
+		hashTableCounter[i] = (tCounter *)malloc(pNumFlow[i]*NUM_HASH*sizeof(tCounter));
 
-	initialCounterBraids_Layer2(hashTable_Layer2, flowTable_Layer2);
+		initialCounterBraids(hashTable[i], flowTable[i], pNumEntry[i], pNumFlow[i]);
+	}
 	
 
 
-	int index_flowTable = 0;
-	int index_flowTable_Layer2 = 0;
-	int ljn = 0;
+	int index_flowTable[NUM_LAYER] = {0};
 
 
 	if((fp_pkt_tag = fopen("result_pkt_2.txt", "r"))==NULL){
@@ -67,12 +65,29 @@ int main(){
 			&pkt.src_port, &pkt.dst_port, &pkt.proto, &pkt.tag) != EOF){
 		if(pkt.proto != 0x6) continue;
 		if(pkt.tag == 1)
-			addFlow(flowTable, &index_flowTable, &pkt);
-		 updateCounterBraids(hashTable, &pkt, hashTable_Layer2, &index_flowTable_Layer2, flowTable_Layer2);
+			addFlow_flowTuple(flowTable[0], &index_flowTable[0], &pkt);
+		 updateCounterBraids(hashTable, &pkt, index_flowTable, flowTable);
 		num_pkt++;
 	}
 
-//test//
+//test//	
+/*	for(i = 0 ; i < NUM_LAYER; i++){
+		printf("=========iternation: %d===========\n",i);
+		printf("******************\t%d\t%d\n",i, pNumFlow[i]);
+		printFlowTable(flowTable[i], pNumFlow[i]);
+		printf("----------------------\n");
+	}
+
+	for(i = 0; i < NUM_LAYER; i++){
+		printf("=========iternation %d HashTable===========\n",i);
+		printf("******************\t%d\t%d\n",i, pNumEntry[i]);
+		printHashTable(hashTable[i], pNumEntry[i]);
+		printf("----------------------\n");
+	}*/
+
+	decodeCounterBraids(hashTable, flowTable, index_flowTable, hashTableCounter);
+
+
 /*	printf("index_flowTable_Layer2:%d\n", index_flowTable_Layer2);
 	for(int n = 0; n < NUM_CONTER_1_LAYER; n++){
 		printf("%dth hashTable count 1Layer:%d\n", n, hashTable[n].count );
@@ -83,14 +98,14 @@ int main(){
 		printf("%dth hashTable count:%d\n",n, hashTable_Layer2[n].count);*/
 
 
-	decodeCounterBraids(hashTable_Layer2, flowTable_Layer2, index_flowTable_Layer2, hashTableCounter_Layer2, NUM_CONTER_2_LAYER);
+/*	decodeCounterBraids(hashTable_Layer2, flowTable_Layer2, index_flowTable_Layer2, hashTableCounter_Layer2, NUM_CONTER_2_LAYER);
 
 	changeFlowTableToHashTable_Layer2(hashTable, flowTable_Layer2, index_flowTable_Layer2);
 
 	decodeCounterBraids(hashTable, flowTable, index_flowTable, hashTableCounter, NUM_CONTER_1_LAYER);
 
 //test//
-/*	for(int n = 0; n < 8; n++)
+	for(int n = 0; n < 8; n++)
 		printf("%dth hashTable count 1Layer:%d\n", n, hashTable[n].count );
 	for(int n=0; n< 8; n++)
 		printf("%dth flow layer 2:%d\tentryPosition:%d\n", n, flowTable_Layer2[n].count,flowTable_Layer2[n].entryPosition);
@@ -98,8 +113,8 @@ int main(){
 	{
 		printf("%dth flow 2 Layer hash values:%d\t%d\tentryPosition:%d\n", n, flowTable_Layer2[n].index_hash[0],flowTable_Layer2[n].index_hash[1],
 			flowTable_Layer2[n].entryPosition);
-	}*/
-
+	}
+*/
 
 
 	if((fp_cb = fopen("result_cb.txt","w"))==NULL){
@@ -111,13 +126,15 @@ int main(){
 		exit(0);
 	}
 
-	printFlowStatics(fp_cb, flowTable, index_flowTable);
-	printBigFlowStatics(fp_bf, flowTable, index_flowTable, bigFLowTable);
+	printFlowStatics(fp_cb, flowTable[0], index_flowTable[0]);
+	printBigFlowStatics(fp_bf, flowTable[0], index_flowTable[0], bigFLowTable);
 
-	int num_error = calculateRelatedError(flowTable, index_flowTable, bigFLowTable);
+
+
+	int num_error = calculateRelatedError(flowTable[0], index_flowTable[0], bigFLowTable);
 
 	printf("num_error:%d\n", num_error);
-	printf("num_flow:%d\n", index_flowTable);
+	printf("num_flow:%d\n", index_flowTable[0]);
 	printf("num_flow_bigFlow:%d\n", num_flow);
 	printf("num_pkt:%d\n", num_pkt);
 
