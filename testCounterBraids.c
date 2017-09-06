@@ -34,17 +34,26 @@ int main(){
 
 	// countBraids;
 		// initial;
-	tHashTable *hashTable;
-	tFlowTable *flowTable;
-	tCounter *hashTableCounter;
+	tHashTable *hashTable, *hashTable_Layer2;
+	tFlowTable *flowTable, *flowTable_Layer2;
+	tCounter *hashTableCounter, *hashTableCounter_Layer2;
 	hashTable = (struct hashTable *)malloc(NUM_CONTER_1_LAYER*sizeof(struct hashTable));
 	flowTable = (struct flowTable *)malloc(MAX_NUM_FLOW*sizeof(struct flowTable));
 	hashTableCounter = (struct counter *)malloc(MAX_NUM_FLOW*NUM_HASH*sizeof(struct counter));
+
+	hashTable_Layer2 = (struct hashTable *)malloc(NUM_CONTER_2_LAYER*sizeof(struct hashTable));
+	flowTable_Layer2 = (struct flowTable *)malloc(NUM_CONTER_1_LAYER*sizeof(struct flowTable));
+	hashTableCounter_Layer2 = (struct counter *)malloc(NUM_CONTER_1_LAYER*NUM_HASH*sizeof(struct counter));
+
 	initialCounterBraids(hashTable, flowTable);
+
+	initialCounterBraids_Layer2(hashTable_Layer2, flowTable_Layer2);
 	
 
 
 	int index_flowTable = 0;
+	int index_flowTable_Layer2 = 0;
+	int ljn = 0;
 
 
 	if((fp_pkt_tag = fopen("result_pkt_2.txt", "r"))==NULL){
@@ -59,11 +68,39 @@ int main(){
 		if(pkt.proto != 0x6) continue;
 		if(pkt.tag == 1)
 			addFlow(flowTable, &index_flowTable, &pkt);
-		updateCounterBraids(hashTable, &pkt);
+		 updateCounterBraids(hashTable, &pkt, hashTable_Layer2, &index_flowTable_Layer2, flowTable_Layer2);
 		num_pkt++;
 	}
 
-	decodeCounterBraids(hashTable, flowTable, index_flowTable, hashTableCounter);
+//test//
+/*	printf("index_flowTable_Layer2:%d\n", index_flowTable_Layer2);
+	for(int n = 0; n < NUM_CONTER_1_LAYER; n++){
+		printf("%dth hashTable count 1Layer:%d\n", n, hashTable[n].count );
+		//printf("stautsBit:%d\n", hashTable[n].statusBit);
+	}
+	printf("-----------------------------------\n");
+	for(int n=0; n < NUM_CONTER_2_LAYER; n++)
+		printf("%dth hashTable count:%d\n",n, hashTable_Layer2[n].count);*/
+
+
+	decodeCounterBraids(hashTable_Layer2, flowTable_Layer2, index_flowTable_Layer2, hashTableCounter_Layer2, NUM_CONTER_2_LAYER);
+
+	changeFlowTableToHashTable_Layer2(hashTable, flowTable_Layer2, index_flowTable_Layer2);
+
+	decodeCounterBraids(hashTable, flowTable, index_flowTable, hashTableCounter, NUM_CONTER_1_LAYER);
+
+//test//
+/*	for(int n = 0; n < 8; n++)
+		printf("%dth hashTable count 1Layer:%d\n", n, hashTable[n].count );
+	for(int n=0; n< 8; n++)
+		printf("%dth flow layer 2:%d\tentryPosition:%d\n", n, flowTable_Layer2[n].count,flowTable_Layer2[n].entryPosition);
+	for (int n = 0; n < 8; n++)
+	{
+		printf("%dth flow 2 Layer hash values:%d\t%d\tentryPosition:%d\n", n, flowTable_Layer2[n].index_hash[0],flowTable_Layer2[n].index_hash[1],
+			flowTable_Layer2[n].entryPosition);
+	}*/
+
+
 
 	if((fp_cb = fopen("result_cb.txt","w"))==NULL){
 		printf("open result_cb.txt error\n");

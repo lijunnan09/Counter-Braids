@@ -14,13 +14,23 @@
 
 #define NUM_LAYER 1
 #define NUM_HASH 2
-#define NUM_CONTER_1_LAYER 65
-#define BIT_HASH_INDEX 6
-#define HASH_MASK 63
+#define NUM_CONTER_1_LAYER 32
+#define BIT_HASH_INDEX 5
+#define HASH_MASK 31
 #define MAX_NUM_FLOW 100
 #define MAX_NUM_PACKET 1000
 #define NUM_ITERATION 10
 #define MIN_VALUE 1
+
+#define NUM_CONTER_2_LAYER 16
+
+#define MAX_NUM_1_LAYER 16	// 8bit;
+
+/*	2^16	65536
+	2^17	131072
+	2^18	262144
+	2^19	534288
+	2^20	1048576*/
 
 
 
@@ -48,6 +58,7 @@ typedef struct counter{
 
 typedef struct flowTable{
 	struct flowTuple ft;
+	uint32 entryPosition;			// the position in previous Position;
 	uint32 count;				// used to record the final estimation value;
 	uint32 index_hash[NUM_HASH];	// used to record the hash values of each hash function;
 	tCounter uList[NUM_HASH];		// used to record the U values returned from hashTable;
@@ -55,6 +66,7 @@ typedef struct flowTable{
 
 typedef struct hashTable {
 	uint32 count;			// number of packets hashed to this entry;
+	uint8 statusBit;		// '1' represent the count is overflow;
 	//uint32 total_count;
 	tCounter *vList;		// used to record the V values returned from flowTable;
 } tHashTable;
