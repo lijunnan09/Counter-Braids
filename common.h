@@ -12,30 +12,30 @@
 
 
 
-#define NUM_LAYER 4
+#define NUM_LAYER 1
 #define NUM_HASH 2
-#define NUM_CONTER_1_LAYER 32
-#define BIT_HASH_INDEX 5
-#define HASH_MASK 31
-#define MAX_NUM_FLOW 100
-#define MAX_NUM_PACKET 1000
+#define NUM_CONTER_1_LAYER 524288
+#define BIT_HASH_INDEX 18
+#define HASH_MASK 524287
+#define MAX_NUM_FLOW 262144
+#define MAX_NUM_PACKET 10000000
 #define NUM_ITERATION 10
 #define MIN_VALUE 1
 
-#define NUM_CONTER_2_LAYER 16
-#define NUM_CONTER_3_LAYER 8
-#define NUM_CONTER_4_LAYER 8
+#define NUM_CONTER_2_LAYER 65536
+#define NUM_CONTER_3_LAYER 256
+#define NUM_CONTER_4_LAYER 64
 
-#define MAX_NUM_1_LAYER 16	// 8bit;
-#define MAX_NUM_2_LAYER 4	// 8bit;
-#define MAX_NUM_3_LAYER 4	// 8bit;
-#define MAX_NUM_4_LAYER 16	// 8bit;
+#define MAX_NUM_1_LAYER 10000000	// 8bit;
+#define MAX_NUM_2_LAYER 64	// 8bit;
+#define MAX_NUM_3_LAYER 32	// 8bit;
+#define MAX_NUM_4_LAYER 9999	// 8bit;
 
 
 /*	2^16	65536
 	2^17	131072
 	2^18	262144
-	2^19	534288
+	2^19	524288
 	2^20	1048576*/
 
 
@@ -75,6 +75,7 @@ typedef struct hashTable {
 	uint32 count;			// number of packets hashed to this entry;
 	uint8 statusBit;		// '1' represent the count is overflow;
 	tCounter *vList;		// used to record the V values returned from flowTable;
+	uint32 numPoint;
 } tHashTable;
 
 struct carry{
@@ -125,5 +126,7 @@ void initialParameter(int * pNumEntry, int * pNumFlow);
 
 int getNumEntry(int hash_level);
 int getNumLayer(int hash_level);
+
+
 
 #endif

@@ -5,31 +5,31 @@
 #include "analysisPcap.h"
 
 int main(){
-	//hash initial
-	initialHash();
-
-
 	//struct flowTuple pkt[MAX_NUM_PACKET];
 	// fp_pcap used to read pcap;
 	// fp_cb used to record countBraids statics;
 	// fp_bf used to record real statics(big flow table);
 	FILE *fp_pcap,*fp_pkt, *fp_pkt_tag,*fp_cb, *fp_bf;
-	
 
 	int num_pkt =0;
-	readTrace(fp_pcap, fp_pkt);
+	int numPkt = 655360;
+	int num_flow; 
+	// store parameters for each layer
+	int pNumEntry[4], pNumFlow[4];
+	// the flow number of each layer;
+	int index_flowTable[NUM_LAYER] = {0};
 
+
+/*========= initial and malloc storage space=========*/
+	//hash initial
+	initialHash();
 
 	// analysis packe by big flow table;
 		// initial
 	tBigFlowTable *bigFLowTable, *bigFLowTable_c;
 	bigFLowTable = (tBigFlowTable *)malloc(NUM_BIG_FLOW_ENTRY*sizeof(tBigFlowTable));
 	bigFLowTable_c = (tBigFlowTable *)malloc(NUM_BIG_FLOW_ENTRY*sizeof(tBigFlowTable));
-	int num_flow; 
-	analysisInitial(bigFLowTable, bigFLowTable_c);
-		// analysis
-	num_flow = analysisPacket(fp_pkt, fp_pkt_tag, bigFLowTable, bigFLowTable_c);	
-
+	
 
 	// countBraids;
 		// initial;
@@ -37,22 +37,26 @@ int main(){
 	tFlowTable *flowTable[NUM_LAYER];
 	tCounter *hashTableCounter[NUM_LAYER];
 
-	int pNumEntry[4], pNumFlow[4];
-
 	initialParameter(pNumEntry, pNumFlow);
 	int i =0; 
 	for(i = 0; i < NUM_LAYER; i++){
 		hashTable[i] = (tHashTable*)malloc(pNumEntry[i]*sizeof(tHashTable));
 		flowTable[i] = (tFlowTable *)malloc(pNumFlow[i]*sizeof(tFlowTable));
 		hashTableCounter[i] = (tCounter *)malloc(pNumFlow[i]*NUM_HASH*sizeof(tCounter));
-
 		initialCounterBraids(hashTable[i], flowTable[i], pNumEntry[i], pNumFlow[i]);
 	}
 	
+/*=====read pcap trace====*/
+	readTrace(fp_pcap, fp_pkt);
+
+/*=====analysis pcap trace by a BigFlowTable strategy====*/
+	analysisInitial(bigFLowTable, bigFLowTable_c);
+		// analysis
+	num_flow = analysisPacket(fp_pkt, fp_pkt_tag, bigFLowTable, bigFLowTable_c);
 
 
-	int index_flowTable[NUM_LAYER] = {0};
-
+/*=========update counters according to the packet readTrace=========*/
+	// read trace which is stored by analysisPacket function;
 
 	if((fp_pkt_tag = fopen("result_pkt_2.txt", "r"))==NULL){
 		printf("read result_pkt_2.txt error\n");
@@ -70,51 +74,10 @@ int main(){
 		num_pkt++;
 	}
 
-//test//	
-/*	for(i = 0 ; i < NUM_LAYER; i++){
-		printf("=========iternation: %d===========\n",i);
-		printf("******************\t%d\t%d\n",i, pNumFlow[i]);
-		printFlowTable(flowTable[i], pNumFlow[i]);
-		printf("----------------------\n");
-	}
 
-	for(i = 0; i < NUM_LAYER; i++){
-		printf("=========iternation %d HashTable===========\n",i);
-		printf("******************\t%d\t%d\n",i, pNumEntry[i]);
-		printHashTable(hashTable[i], pNumEntry[i]);
-		printf("----------------------\n");
-	}*/
-
+/*======================decode the counters======================*/
 	decodeCounterBraids(hashTable, flowTable, index_flowTable, hashTableCounter);
 
-
-/*	printf("index_flowTable_Layer2:%d\n", index_flowTable_Layer2);
-	for(int n = 0; n < NUM_CONTER_1_LAYER; n++){
-		printf("%dth hashTable count 1Layer:%d\n", n, hashTable[n].count );
-		//printf("stautsBit:%d\n", hashTable[n].statusBit);
-	}
-	printf("-----------------------------------\n");
-	for(int n=0; n < NUM_CONTER_2_LAYER; n++)
-		printf("%dth hashTable count:%d\n",n, hashTable_Layer2[n].count);*/
-
-
-/*	decodeCounterBraids(hashTable_Layer2, flowTable_Layer2, index_flowTable_Layer2, hashTableCounter_Layer2, NUM_CONTER_2_LAYER);
-
-	changeFlowTableToHashTable_Layer2(hashTable, flowTable_Layer2, index_flowTable_Layer2);
-
-	decodeCounterBraids(hashTable, flowTable, index_flowTable, hashTableCounter, NUM_CONTER_1_LAYER);
-
-//test//
-	for(int n = 0; n < 8; n++)
-		printf("%dth hashTable count 1Layer:%d\n", n, hashTable[n].count );
-	for(int n=0; n< 8; n++)
-		printf("%dth flow layer 2:%d\tentryPosition:%d\n", n, flowTable_Layer2[n].count,flowTable_Layer2[n].entryPosition);
-	for (int n = 0; n < 8; n++)
-	{
-		printf("%dth flow 2 Layer hash values:%d\t%d\tentryPosition:%d\n", n, flowTable_Layer2[n].index_hash[0],flowTable_Layer2[n].index_hash[1],
-			flowTable_Layer2[n].entryPosition);
-	}
-*/
 
 
 	if((fp_cb = fopen("result_cb.txt","w"))==NULL){
@@ -126,13 +89,14 @@ int main(){
 		exit(0);
 	}
 
+/*==========print the statics both in CounterBraids and BigFlowTable strategies=============*/
 	printFlowStatics(fp_cb, flowTable[0], index_flowTable[0]);
 	printBigFlowStatics(fp_bf, flowTable[0], index_flowTable[0], bigFLowTable);
 
-
-
+/*========compare the error between CounterBraids with real statics(BigFLowTable)=========*/
 	int num_error = calculateRelatedError(flowTable[0], index_flowTable[0], bigFLowTable);
 
+/*=====printf result======*/ 
 	printf("num_error:%d\n", num_error);
 	printf("num_flow:%d\n", index_flowTable[0]);
 	printf("num_flow_bigFlow:%d\n", num_flow);

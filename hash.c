@@ -110,6 +110,6 @@ uint32 calculateHash32(uint32 hash_32bit){
 		hash_index ^= (hash_32bit & HASH_MASK);
 		hash_32bit = hash_32bit >> BIT_HASH_INDEX;
 	}
+
 	return (hash_index & HASH_MASK);
 }
-

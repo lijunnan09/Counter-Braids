@@ -92,7 +92,7 @@ int analysisPacket(FILE *fp_pkt, FILE * fp_pkt_tag,tBigFlowTable *bigFlowTable, 
 			pkt.src_port,pkt.dst_port, pkt.proto, pkt.tag);
 
 		num_pkt++;
-		if((num_pkt > MAX_NUM_PACKET) || (num_flow > MAX_NUM_FLOW))
+		if((num_pkt >= MAX_NUM_PACKET) || (num_flow >= MAX_NUM_FLOW))
 			break;
 	}
 	fclose(fp_pkt);

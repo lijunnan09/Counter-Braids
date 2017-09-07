@@ -85,3 +85,4 @@ int getNumLayer(int hash_level){
 	}
 	return num_entry;
 }
+

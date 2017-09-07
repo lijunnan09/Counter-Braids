@@ -28,6 +28,7 @@ void initialCounterBraids(tHashTable *hashTable, tFlowTable *flowTable, int num_
 		hashTable[i].count = 0;
 		hashTable[i].statusBit = 0;
 		hashTable[i].vList = NULL;
+		hashTable[i].numPoint = 0;
 	}
 	for(i= 0; i< num_flow; i++){
 		flowTable[i].count = 0;
@@ -173,10 +174,19 @@ void decodeInitial(tHashTable *hashTable, tFlowTable *flowTable, int num_flow, t
 
 			tCounter *pCount = hashTable[index].vList;
 			tCounter *preCount = NULL;
+
+			int i = 0;
+			for(i =0; i < hashTable[index].numPoint; i++){
+				if(pCount){
+					preCount = pCount;
+					pCount = pCount-> cNext;
+				}
+			}
+			/*
 			while(pCount != NULL) {
 				preCount = pCount;
 				pCount = pCount->cNext;
-			}
+			}*/
 
 			// malloc 
 			tCounter *newCount = &hashTableCount[count_index++];
@@ -185,10 +195,16 @@ void decodeInitial(tHashTable *hashTable, tFlowTable *flowTable, int num_flow, t
 			newCount->count_value = 0;
 			newCount->cNext = NULL;
 
-			if(preCount == NULL)
+			if(hashTable[index].numPoint == 0)
+				hashTable[index].vList = newCount;
+			else
+				preCount->cNext = newCount;
+			hashTable[index].numPoint += 1;
+
+/*			if(preCount == NULL)
 				hashTable[index].vList = newCount;
 			else 	
-				preCount->cNext = newCount;
+				preCount->cNext = newCount;*/
 		}
 	}
 }
@@ -214,23 +230,11 @@ void decodeProcess(tHashTable *hashTable, tFlowTable *flowTable, int num_flow, t
 	uint32 max, min;
 	uint32 v_value, u_value, total_value;
 
-	//test
-/*	FILE *fp_f, *fp_h;
-	if((fp_f = fopen("flowTable.txt","a"))==NULL){
-		printf("open flowTable.txe error\n");
-		exit(0);
-	}
-	fp_h = fopen("hashTable.txt","a");*/
-
 	decodeInitial(hashTable, flowTable, num_flow, hashTableCount);
-
-/*	printFlowTable_decode(fp_f, flowTable, num_flow);
-	printHashTable_decode(fp_h, hashTable, num_entry);*/
 
 	int perLoop, perFlow, perHash, perHashEntry;
 
 	for(perLoop = 1; perLoop < NUM_ITERATION; perLoop++){
-
 		// flowTable to hashTable
 		for(perFlow = 0; perFlow < num_flow; perFlow++){
 
